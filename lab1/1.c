@@ -5,7 +5,7 @@ int main() {
   int number = 0;
 
   printf("decimal:");
-  scanf("%u", &number);
+  scanf("%d", &number);
 
   if (number < 0) {
     printf("Error! Negative number\n");
@@ -17,7 +17,7 @@ int main() {
   int size = sizeof(number) * size_cell;
 
   while (size != 0) {
-    printf("%u", number >> (size - 1) & 1);
+    printf("%d", number >> (size - 1) & 1);
 
     size--;
   }

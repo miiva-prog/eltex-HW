@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 int main() {
-  int N, value = 1;
+  int N;
 
   printf("size:");
   scanf("%d", &N);
@@ -9,7 +9,7 @@ int main() {
   int arr[N];
 
   for (int n = 0; n < N; n++)
-    arr[n] = value++;
+    scanf("%d", &arr[n]);
 
   for (int n = N - 1; n >= 0; n--)
     printf("%d ", arr[n]);

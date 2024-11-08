@@ -2,26 +2,32 @@
 
 int main() {
   const int size_cell = 8;
-  unsigned int number = 0, counter_units = 0;
+  int number = 0, counter_units = 0;
 
   printf("decimal:");
-  scanf("%u", &number);
+  scanf("%d", &number);
+
+  if (number < 0) {
+    printf("Error! Negative number\n");
+    return -1;
+  }
+
   printf("binary:");
 
-  unsigned int size = sizeof(number) * size_cell;
+  int size = sizeof(number) * size_cell;
 
   while (size != 0) {
-    unsigned int bit_num = number >> (size - 1) & 1;
+    int bit_num = number >> (size - 1) & 1;
 
     if (bit_num == 1)
       counter_units++;
 
-    printf("%u", bit_num);
+    printf("%d", bit_num);
 
     size--;
   }
 
-  printf("\ncount units:%u\n", counter_units);
+  printf("\ncount units:%d\n", counter_units);
 
   return 0;
 }
