@@ -22,7 +22,7 @@ int main() {
 
   int size = sizeof(number) * size_cell;
 
-  number &= ~(255 << ((change_bit - 1) * 8));
+  number &= 0xFF00FFFF;
   number |= (change_number & 255) << ((change_bit - 1) * 8);
 
   printf("binary:");
