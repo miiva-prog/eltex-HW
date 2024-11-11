@@ -6,6 +6,11 @@ int main() {
   printf("size:");
   scanf("%d", &N);
 
+  if (N <= 0) {
+    printf("incorrect size\n");
+    return -1;
+  }
+
   int arr[N][N];
   int size = N;
 
