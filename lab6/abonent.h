@@ -4,11 +4,10 @@
 #define SIZE_STRING 10
 
 struct abonent {
-  struct abonent *prev;
+  struct abonent *prev, *next;
   char name[SIZE_STRING];
   char second_name[SIZE_STRING];
   char tel[SIZE_STRING];
-  struct abonent *next;
 };
 
 void add(struct abonent **directory, char *name, char *sec_name, char *tel);

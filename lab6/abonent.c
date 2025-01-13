@@ -6,6 +6,7 @@ void add(struct abonent **directory, char *name, char *sec_name, char *tel) {
   sprintf(node->name, "%s", name);
   sprintf(node->second_name, "%s", sec_name);
   sprintf(node->tel, "%s", tel);
+
   node->next = NULL;
 
   if (*directory == NULL) {
