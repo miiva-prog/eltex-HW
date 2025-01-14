@@ -39,8 +39,11 @@ int main() {
 
       struct abonent *node = search(&directory, name);
 
-      printf("name: %s | second name: %s | tel: %s\n", node->name,
-             node->second_name, node->tel);
+      if (node != NULL)
+        printf("name: %s | second name: %s | tel: %s\n", node->name,
+               node->second_name, node->tel);
+      else
+        printf("no such abonent\n");
     } else if (number == 4) {
       print(directory);
     } else if (number == 5) {

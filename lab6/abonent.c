@@ -40,7 +40,7 @@ struct abonent *search(struct abonent **directory, char *name) {
 }
 
 void delete(struct abonent **directory, char *name, char *sec_name, char *tel) {
-  if (directory == NULL)
+  if (*directory == NULL)
     return;
 
   struct abonent *node = *directory;
