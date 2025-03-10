@@ -16,4 +16,4 @@ mc.o: mc.c mc.h
 	$(CC) $(CFLAGS) -c mc.c
 
 clean:
-	rm -f *.o main
+	rm -f *.o main *.txt

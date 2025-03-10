@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
 
   fgets(arr, SIZE, file);
   printf("%s\n", arr);
+  fclose(file);
 
   return 0;
 }
