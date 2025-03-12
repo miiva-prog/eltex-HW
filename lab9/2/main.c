@@ -176,6 +176,5 @@ int main(int argc, char **argv) {
   refresh();
   getch();
   endwin();
-
-  return 0;
+  exit(EXIT_FAILURE);
 }
