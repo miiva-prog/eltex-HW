@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
         wrefresh(subwnd2);
       }
 
-      char command[100], str_name[20];
+      char command[100], str_name[SIZE_NAME];
 
       if (x == 1)
         strcpy(str_name, argv[1]);
@@ -114,11 +114,10 @@ int main(int argc, char **argv) {
         return -1;
       }
 
-      if (x == 1) {
+      if (x == 1)
         search_file(file, y - 1, name_file, sizeof(name_file));
-      } else {
+      else
         search_file(file, y - 1, name_file2, sizeof(name_file2));
-      }
 
       fclose(file);
 

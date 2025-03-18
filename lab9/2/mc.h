@@ -4,7 +4,7 @@
 #include <sys/ioctl.h>
 #define COUNT_STR 43
 #define SIZE_FILE 255
-#define SIZE_NAME 25
+#define SIZE_NAME 40
 
 void sig_winch(int signo);
 
