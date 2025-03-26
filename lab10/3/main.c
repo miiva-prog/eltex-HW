@@ -1,10 +1,9 @@
 #include "bash.h"
 
 int main() {
-  char command[50], path[25] = "/";
+  char *command[50], path[25] = "/";
 
   while (1) {
-    memset(command, 0, sizeof(command));
     printf("> ");
 
     int index = 0;
@@ -18,10 +17,16 @@ int main() {
     if (strcmp("exit", arr) == 0) {
       break;
     } else if (strcmp("clear", arr) == 0) {
-      sprintf(command, "%s", arr);
+      index = search_arguments(arr, command);
     } else {
       search_path(arr, path);
-      sprintf(command, "%s %s", arr, path);
+
+      index = search_arguments(arr, command);
+
+      if (index > 1 || strcmp("ls", command[0]) == 0) {
+        command[index] = path;
+        command[index + 1] = NULL;
+      }
     }
 
     int pid = fork();
@@ -29,7 +34,7 @@ int main() {
     if (pid < 0) {
       exit(1);
     } else if (pid == 0) {
-      system(command);
+      execvp(command[0], command);
       exit(0);
     }
 

@@ -32,3 +32,17 @@ void search_path(char *command, char *path) {
     }
   }
 }
+
+int search_arguments(char *input, char **args) {
+  char *token = strtok(input, " ");
+  int index = 0;
+
+  while (token != NULL && index < ARGS - 1) {
+    args[index++] = token;
+    token = strtok(NULL, " ");
+  }
+
+  args[index] = NULL;
+
+  return index;
+}
