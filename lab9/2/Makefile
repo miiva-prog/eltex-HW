@@ -1,7 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra
 LDFLAGS = -lncurses
-
 OBJ = main.o mc.o
 
 all: main
