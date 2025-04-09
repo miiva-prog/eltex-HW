@@ -1,0 +1,7 @@
+*.o
+1/pth
+2/mapreduce
+2/mutex
+2/pthread
+2/serial
+3/production
