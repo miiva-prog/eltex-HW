@@ -1,0 +1,7 @@
+*.o
+2/server
+2/client
+1/POSIX/server
+1/POSIX/client
+1/systemV/server
+1/systemV/client
