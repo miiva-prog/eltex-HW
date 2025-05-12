@@ -52,11 +52,15 @@ int main() {
       return -1;
     }
 
-    if (recv(fdclient, buffer, sizeof(buffer), 0) == -1) {
+    int recviced = recv(fdclient, buffer, sizeof(buffer), 0);
+
+    if (recviced < 0) {
       perror("recv");
       close(fd);
       return -1;
     }
+
+    buffer[recviced] = '\0';
 
     printf("%s\n", buffer);
     sprintf(buffer, "%d", atoi(buffer) + 1);
