@@ -1,0 +1,69 @@
+#include <ctype.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#define PORT 10000
+#define PROTOCOL 0
+#define SIZE 1024
+#define MAX_CLIENT 3
+
+int main() {
+  struct sockaddr_in server, client;
+  int fd = socket(AF_INET, SOCK_STREAM, PROTOCOL);
+
+  if (fd < 0) {
+    perror("socket");
+    return -1;
+  }
+
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons(PORT);
+
+  if (bind(fd, (struct sockaddr *)&server, sizeof(server)) < 0) {
+    perror("bind");
+    close(fd);
+    return -1;
+  }
+
+  if (listen(fd, MAX_CLIENT) < 0) {
+    perror("listen");
+    close(fd);
+    return -1;
+  }
+
+  char buffer[SIZE];
+  socklen_t len = sizeof(client);
+
+  while (1) {
+    int fdclient = accept(fd, (struct sockaddr *)&client, &len);
+
+    if (fdclient < 0) {
+      perror("accept");
+      close(fd);
+      return -1;
+    }
+
+    int recviced = recv(fdclient, buffer, SIZE, 0);
+
+    if (recviced < 0) {
+      perror("recv");
+      close(fd);
+      return -1;
+    }
+
+    buffer[recviced] = '\0';
+
+    printf("%s\n", buffer);
+    sprintf(buffer, "%d", atoi(buffer) + 1);
+    send(fdclient, buffer, sizeof(buffer), 0);
+  }
+
+  close(fd);
+
+  return 0;
+}

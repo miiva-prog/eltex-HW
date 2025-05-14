@@ -1,29 +1,29 @@
 #include <ctype.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/un.h>
 #include <unistd.h>
 
-#define PATH "/tmp/server.socket"
+#define PORT 10000
 #define PROTOCOL 0
 #define SIZE 1024
 
 int main() {
-  struct sockaddr_un server, client;
-  int fd = socket(AF_LOCAL, SOCK_DGRAM, PROTOCOL);
+  struct sockaddr_in server, client;
+  int fd = socket(AF_INET, SOCK_DGRAM, PROTOCOL);
 
   if (fd < 0) {
     perror("socket");
     return -1;
   }
 
-  unlink(PATH);
   memset(&server, 0, sizeof(server));
-  strcpy(server.sun_path, PATH);
 
-  server.sun_family = AF_LOCAL;
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons(PORT);
 
   if (bind(fd, (struct sockaddr *)&server, sizeof(server)) < 0) {
     perror("bind");
@@ -31,16 +31,15 @@ int main() {
     return -1;
   }
 
+  socklen_t len = sizeof(client);
   char buffer[SIZE];
 
   while (1) {
-    socklen_t len = sizeof(client);
     int recv = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr *)&client, &len);
 
     if (recv < 0) {
       perror("recvfrom");
       close(fd);
-      unlink(PATH);
       return -1;
     }
 
@@ -48,12 +47,11 @@ int main() {
 
     printf("%s\n", buffer);
     sprintf(buffer, "%d", atoi(buffer) + 1);
-    sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr *)&client,
+    sendto(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client,
            sizeof(client));
   }
 
   close(fd);
-  unlink(PATH);
 
   return 0;
 }
