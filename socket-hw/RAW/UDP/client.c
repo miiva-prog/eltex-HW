@@ -11,7 +11,6 @@
 #define DEST_PORT 9000
 #define PROTOCOL 0
 #define SIZE 1024
-#define HEADER_SIZE 8
 #define IP "127.0.0.1"
 #define SIZE_UDP 4
 
@@ -30,6 +29,8 @@ int main() {
     return -1;
   }
 
+  memset(&client, 0, sizeof(client));
+
   udp_head.header.len = htons(sizeof(struct msg_UDP));
   udp_head.header.source = htons(PORT);
   udp_head.header.dest = htons(DEST_PORT);
@@ -39,7 +40,7 @@ int main() {
 
   strcpy(udp_head.buffer, "100");
 
-  if (inet_pton(AF_INET, IP, &(client.sin_addr.s_addr)) <= 0) {
+  if (inet_pton(AF_INET, IP, &client.sin_addr.s_addr) <= 0) {
     perror("inet_pton");
     return -1;
   }
