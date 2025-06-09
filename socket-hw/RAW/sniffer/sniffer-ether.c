@@ -16,6 +16,7 @@
 #define PORT 10000
 #define DEST_PORT 9000
 #define SIZE_PAYLOAD 64
+#define ITER_CHECKSUM 10
 
 struct msg_UDP_IP_ETH {
   struct iphdr ip_header;
@@ -66,6 +67,16 @@ int main() {
          sizeof(sender));
 
   char buffer[SIZE];
+  int checksum = 0;
+  short *checks_ptr = (short *)&head.ip_header;
+
+  for (int n = 0; n < ITER_CHECKSUM; n++) {
+    checksum += *checks_ptr;
+    checks_ptr++;
+  }
+
+  checksum = (checksum & 0xFFFF) + (checksum >> 16);
+  checksum = ~checksum;
 
   while (1) {
     if (recv(fd, buffer, SIZE, 0) < 0) {
