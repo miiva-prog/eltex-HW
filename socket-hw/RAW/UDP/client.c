@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <netinet/in.h>
 #include <netinet/udp.h>
 #include <stdio.h>
