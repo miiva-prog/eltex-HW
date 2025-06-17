@@ -21,8 +21,7 @@ struct msg_UDP_IP {
 int main() {
   struct sockaddr_in client;
   struct msg_UDP_IP head;
-  int flag = 1;
-  int fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  int flag = 1, fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
 
   if (fd < 0) {
     perror("socket");

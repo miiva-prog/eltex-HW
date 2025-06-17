@@ -8,7 +8,6 @@
 
 #define PORT 10000
 #define DEST_PORT 9000
-#define PROTOCOL 0
 #define SIZE 1024
 #define IP "127.0.0.1"
 #define SIZE_UDP 4
