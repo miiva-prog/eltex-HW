@@ -31,7 +31,7 @@ int main() {
   server.sin_family = AF_INET;
   server.sin_port = htons(PORT);
 
-  if (inet_pton(AF_INET, IP, &server.sin_addr) <= 0) {
+  if (inet_pton(AF_INET, MULTI_IP, &server.sin_addr) <= 0) {
     perror("inet_pton");
     close(fd);
     return -1;
