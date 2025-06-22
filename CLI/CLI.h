@@ -12,3 +12,11 @@ struct driver {
 };
 
 extern int count_drivers;
+
+int create_driver(struct driver *car);
+
+void send_task(struct driver car);
+
+int get_status(struct driver car);
+
+void get_drivers(struct driver *car);
