@@ -1,215 +1,181 @@
 #include <arpa/inet.h>
-#include <pthread.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/epoll.h>
 #include <time.h>
 #include <unistd.h>
 
-#define PORT_TCP_LISTENER 10000
-#define PORT_UDP_LISTENER 10001
-#define PORT_BASE 10002
+#define PORT_TCP 10000
+#define PORT_UDP 10001
 #define IP "127.0.0.1"
 #define PROTOCOL 0
-#define MAX_SERVER 10
-#define MAX_PORT 10999
+#define MAX_CLIENTS 10
+#define MAX_EVENTS 64
 
-struct sockaddr_in clients[MAX_SERVER];
-int next_port = PORT_BASE;
+struct tcp_client {
+  int fd;
+  int sent_count;
+  time_t last_sent;
+};
 
-void *tcp_server();
+struct udp_client {
+  struct sockaddr_in addr;
+  int sent_count;
+  time_t last_sent;
+};
 
-void *udp_server(void *arg);
+int no_block(int fd);
 
 int main() {
-  struct sockaddr_in tcp_addr, udp_addr;
-  pthread_t threads[MAX_SERVER];
-  int udp_client_count = 0, thread_count = 0;
-  int flag = 1, fd_tcp = socket(AF_INET, SOCK_STREAM, PROTOCOL);
+  struct sockaddr_in tcp, udp;
+  struct epoll_event ev, events[MAX_EVENTS];
+  struct tcp_client tcp_clients[MAX_CLIENTS];
+  struct udp_client udp_clients[MAX_CLIENTS];
+  int tcp_count = 0, udp_count = 0;
 
-  if (fd_tcp < 0) {
+  int fd_tcp = socket(AF_INET, SOCK_STREAM, PROTOCOL);
+  int flag = 1, fd_udp = socket(AF_INET, SOCK_DGRAM, PROTOCOL);
+
+  if (fd_tcp < 0 || fd_udp < 0) {
     perror("socket");
     return -1;
   }
-
-  tcp_addr.sin_family = AF_INET;
-  tcp_addr.sin_addr.s_addr = INADDR_ANY;
-  tcp_addr.sin_port = htons(PORT_TCP_LISTENER);
 
   if (setsockopt(fd_tcp, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) < 0) {
     perror("setsockopt");
     return -1;
   }
 
-  if (bind(fd_tcp, (struct sockaddr *)&tcp_addr, sizeof(tcp_addr)) < 0) {
+  tcp.sin_family = AF_INET;
+  tcp.sin_addr.s_addr = INADDR_ANY;
+  tcp.sin_port = htons(PORT_TCP);
+  udp.sin_family = AF_INET;
+  udp.sin_addr.s_addr = INADDR_ANY;
+  udp.sin_port = htons(PORT_UDP);
+
+  if (bind(fd_tcp, (struct sockaddr *)&tcp, sizeof(tcp)) < 0 ||
+      bind(fd_udp, (struct sockaddr *)&udp, sizeof(udp)) < 0) {
     perror("bind");
     return -1;
   }
 
-  if (listen(fd_tcp, MAX_SERVER) < 0) {
+  if (listen(fd_tcp, MAX_CLIENTS) < 0) {
     perror("listen");
     return -1;
   }
 
-  int fd_udp = socket(AF_INET, SOCK_DGRAM, PROTOCOL);
-
-  if (fd_udp < 0) {
-    perror("socket");
-    close(fd_tcp);
-    return -1;
-  }
-
-  udp_addr.sin_family = AF_INET;
-  udp_addr.sin_addr.s_addr = INADDR_ANY;
-  udp_addr.sin_port = htons(PORT_UDP_LISTENER);
-
-  if (bind(fd_udp, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) == -1) {
-    perror("bind");
-    close(fd_udp);
-    return -1;
-  }
+  no_block(fd_tcp);
+  no_block(fd_udp);
 
   int epfd = epoll_create1(0);
-  struct epoll_event ev = {.events = EPOLLIN}, events[MAX_SERVER];
 
+  ev.events = EPOLLIN;
   ev.data.fd = fd_tcp;
+
   epoll_ctl(epfd, EPOLL_CTL_ADD, fd_tcp, &ev);
 
   ev.data.fd = fd_udp;
+
   epoll_ctl(epfd, EPOLL_CTL_ADD, fd_udp, &ev);
 
-  while (thread_count < MAX_SERVER) {
-    int nfds = epoll_wait(epfd, events, MAX_SERVER, -1);
+  while (1) {
+    int nfds = epoll_wait(epfd, events, MAX_EVENTS, 1000);
 
-    for (int i = 0; i < nfds; i++) {
-      if (events[i].data.fd == fd_tcp) {
-        int client = accept(fd_tcp, NULL, NULL);
+    for (int n = 0; n < nfds; n++) {
+      int fd = events[n].data.fd;
 
-        if (client == -1)
+      if (fd == fd_tcp && tcp_count < MAX_CLIENTS) {
+        int client_fd = accept(fd_tcp, NULL, NULL);
+
+        if (client_fd < 0)
           continue;
 
-        int new_port = next_port;
+        no_block(client_fd);
 
-        pthread_create(&threads[thread_count++], NULL, tcp_server, NULL);
-        send(client, &new_port, sizeof(new_port), 0);
-        close(client);
-      } else if (events[i].data.fd == fd_udp) {
-        char buffer[10];
+        ev.events = EPOLLIN | EPOLLET;
 
-        socklen_t len = sizeof(clients[udp_client_count]);
+        ev.data.fd = client_fd;
 
-        recvfrom(fd_udp, buffer, sizeof(buffer), 0,
-                 (struct sockaddr *)&clients[udp_client_count], &len);
+        epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev);
 
-        int *index = malloc(sizeof(int));
+        tcp_clients[tcp_count].fd = client_fd;
+        tcp_clients[tcp_count].sent_count = 0;
+        tcp_clients[tcp_count].last_sent = 0;
+        tcp_count++;
 
-        *index = udp_client_count++;
+        printf("tcp client(%d)\n", client_fd);
+      } else if (fd == fd_udp && udp_count < MAX_CLIENTS) {
+        char buf[10];
+        struct sockaddr_in cli_addr;
+        socklen_t len = sizeof(cli_addr);
 
-        pthread_create(&threads[thread_count++], NULL, udp_server, index);
+        recvfrom(fd_udp, buf, sizeof(buf), 0, (struct sockaddr *)&cli_addr,
+                 &len);
+
+        udp_clients[udp_count].addr = cli_addr;
+        udp_clients[udp_count].sent_count = 0;
+        udp_clients[udp_count].last_sent = 0;
+        udp_count++;
+
+        printf("udp client(%d)\n", udp_count);
       }
-
-      printf("port: %d server: %d\n", next_port - 1, thread_count);
     }
-  }
 
-  for (int n = 0; n < thread_count; n++)
-    pthread_join(threads[n], NULL);
+    for (int n = 0; n < tcp_count; n++) {
+      time_t now = time(NULL);
+
+      if (tcp_clients[n].sent_count < MAX_CLIENTS &&
+          now - tcp_clients[n].last_sent >= 2) {
+        time_t t = now;
+
+        send(tcp_clients[n].fd, &t, sizeof(t), 0);
+
+        tcp_clients[n].sent_count++;
+        tcp_clients[n].last_sent = now;
+
+        if (tcp_clients[n].sent_count == MAX_CLIENTS) {
+          close(tcp_clients[n].fd);
+          tcp_clients[n] = tcp_clients[--tcp_count];
+          n--;
+        }
+      }
+    }
+
+    for (int n = 0; n < udp_count; n++) {
+      time_t now = time(NULL);
+
+      if (udp_clients[n].sent_count < MAX_CLIENTS &&
+          now - udp_clients[n].last_sent >= 2) {
+        time_t t = now;
+
+        sendto(fd_udp, &t, sizeof(t), 0,
+               (struct sockaddr *)&udp_clients[n].addr,
+               sizeof(udp_clients[n].addr));
+
+        udp_clients[n].sent_count++;
+        udp_clients[n].last_sent = now;
+
+        if (udp_clients[n].sent_count == MAX_CLIENTS) {
+          udp_clients[n] = udp_clients[--udp_count];
+          n--;
+        }
+      }
+    }
+
+    printf("tcp:%d udp:%d\n", tcp_count, udp_count);
+  }
 
   close(fd_tcp);
   close(fd_udp);
+  close(epfd);
 
   return 0;
 }
 
-void *tcp_server() {
-  struct sockaddr_in server;
+int no_block(int fd) {
+  int flags = fcntl(fd, F_GETFL, 0);
 
-  server.sin_family = AF_INET;
-  server.sin_addr.s_addr = INADDR_ANY;
-
-  int local_port = __sync_fetch_and_add(&next_port, 1);
-
-  server.sin_port = htons(local_port);
-
-  int fd = socket(AF_INET, SOCK_STREAM, PROTOCOL);
-
-  while (bind(fd, (struct sockaddr *)&server, sizeof(server)) == -1) {
-    local_port = __sync_fetch_and_add(&next_port, 1);
-    server.sin_port = htons(local_port);
-
-    if (local_port > MAX_PORT) {
-      printf("out of range port\n");
-      return NULL;
-    }
-  }
-
-  if (listen(fd, 2) < 0) {
-    perror("listen");
-    close(fd);
-    return NULL;
-  }
-
-  int fd_client = accept(fd, NULL, NULL);
-
-  if (fd_client < 0) {
-    perror("accept");
-    close(fd);
-    return NULL;
-  }
-
-  time_t times;
-
-  for (int n = 0; n < MAX_SERVER; n++) {
-    times = time(NULL);
-
-    send(fd_client, &times, sizeof(times), 0);
-    sleep(2);
-  }
-
-  close(fd_client);
-  close(fd);
-
-  return NULL;
-}
-
-void *udp_server(void *arg) {
-  int index = *(int *)arg;
-
-  free(arg);
-
-  struct sockaddr_in server;
-
-  server.sin_family = AF_INET;
-  server.sin_addr.s_addr = INADDR_ANY;
-
-  int local_port = __sync_fetch_and_add(&next_port, 1);
-
-  server.sin_port = htons(local_port);
-
-  int fd = socket(AF_INET, SOCK_DGRAM, PROTOCOL);
-
-  while (bind(fd, (struct sockaddr *)&server, sizeof(server)) == -1) {
-    local_port = __sync_fetch_and_add(&next_port, 1);
-
-    server.sin_port = htons(local_port);
-
-    if (local_port > MAX_PORT) {
-      printf("out of range port\n");
-      return NULL;
-    }
-  }
-
-  time_t times;
-
-  for (int n = 0; n < MAX_SERVER; n++) {
-    times = time(NULL);
-
-    sendto(fd, &times, sizeof(times), 0, (struct sockaddr *)&clients[index],
-           sizeof(clients[index]));
-    sleep(2);
-  }
-
-  close(fd);
-
-  return NULL;
+  return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }

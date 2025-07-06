@@ -9,17 +9,17 @@
 #define PORT_HOST 10001
 #define PROTOCOL 0
 #define IP "127.0.0.1"
-#define MAX_PORT 10300
 #define MAX_SERVERS 10
 
 int main() {
-  struct sockaddr_in server;
   int fd = socket(AF_INET, SOCK_DGRAM, PROTOCOL);
 
   if (fd < 0) {
     perror("socket");
     return -1;
   }
+
+  struct sockaddr_in server;
 
   server.sin_family = AF_INET;
   server.sin_port = htons(PORT_HOST);
@@ -31,9 +31,11 @@ int main() {
          sizeof(server));
 
   time_t times;
+  socklen_t len = sizeof(server);
 
   for (int n = 0; n < MAX_SERVERS; n++) {
-    if (recv(fd, &times, sizeof(times), 0) <= 0)
+    if (recvfrom(fd, &times, sizeof(times), 0, (struct sockaddr *)&server,
+                 &len) <= 0)
       break;
 
     printf("time: %s", ctime(&times));
